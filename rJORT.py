@@ -6,6 +6,7 @@ import time
 import sqlite3
 import math
 import os
+import platform
 import csv
 from pygame.sprite import Group, Sprite, spritecollide, groupcollide
 import pandas as pd
@@ -16,10 +17,6 @@ from time import sleep
 import scipy
 import numpy
 import tkinter as tk
-
-import LoadingWindow
-import EPQ_R
-
 import base64
 import socket
 import subprocess
@@ -28,6 +25,20 @@ global sql_type
 global ready
 global buttonspeed
 global joystick
+
+pygame.joystick.init()
+
+joystick_count = pygame.joystick.get_count()
+
+if joystick_count > 0:
+
+    for i in range(joystick_count):
+        joystick = pygame.joystick.Joystick(i)
+        joystick.init()
+        print(f"Joystick {i}: {joystick.get_name()}")
+
+    joystick = pygame.joystick.Joystick(0)
+    print(f'\nUsing {joystick.get_name()}')
 
 def read_joystick_direction(joystick, axis_state, threshold=0.2):
     pygame.event.pump()
@@ -47,42 +58,21 @@ def read_joystick_direction(joystick, axis_state, threshold=0.2):
     return direction
 
 
-lab = input("\nIn lab Y / N: ")
-if lab == "Y" or lab == "y":
-    print("\nTESTING\n")
-    inlab = True
-else:
+inlab = True
+Test = False
+stimtracker_available = True
+if not inlab:
     inlab = False
     stimtracker_available = False
-
-testing = input("Practice run Y / N: ")
-
-if testing == "Y" or testing == "y":
-    print("\nTESTING\n")
     Test = True
-else:
-    Test = False
 
 def triggers():
-        os_name = platform.system()
-        os_version = platform.version()
-
-        global windows
-
-        windows = None
-
-        if "Windows" in os_name:
-                windows = True
-                if inlab:
-                    import cdtest
-            
-        global stimtracker_available
-        stimtracker_available = False  
 
         try:
-                if windows and inlab:
-                    import cdtest
-                    stimtracker_available = True
+            global stimtracker_available
+            stimtracker_available = True  
+
+            import cdtest
 
         except ImportError as e:
                 show_error(f"Failed to import cdtest: {e}")
@@ -97,8 +87,7 @@ def triggers():
                     show_error("StimTracker is not connected")
                     stimtracker_available = False
 
-if inlab:
-    triggers()
+triggers()
 
 connection = sqlite3.connect('rJORT.db')
 connection.row_factory = sqlite3.Row
@@ -118,28 +107,6 @@ try:
 except FileExistsError as e:
         print(e)
             
-def installation():
-    import pkg_resources
-    packages_to_install = [
-        "pygame", "pandas", "pymysql", "statsmodels",
-        "seaborn", "numpy", "matplotlib", "scipy", "joystick"
-    ]
-    
-    installed_packages = {pkg.key for pkg in pkg_resources.working_set}
-    
-    if "pygame" not in installed_packages:
-        print("Pygame not found, installing all packages...")
-        for package in packages_to_install:
-            try:
-                subprocess.check_call(["pip", "install", package])
-                print(f"Successfully installed {package}")
-            except subprocess.CalledProcessError as e:
-                print(f"Failed to install {package}: {e}")
-    else:
-        print("Pygame is already installed.")
-
-installation()
-
 def sql_rt(participant_number, sql_type, ReactionTime, score):
     
     cursor.execute("""
@@ -288,7 +255,8 @@ os.system('cls')
 
 while True:
         center_text("Welcome to the task!")
-        participant_number = input("\n\n" + " " * (os.get_terminal_size().columns // 2 - 10) + "Your Number: ")
+        participant_number = "DEMO"
+        #participant_number = input("\n\n" + " " * (os.get_terminal_size().columns // 2 - 10) + "Your Number: ")
         directoryname = f"Backup/Participant {participant_number}"
         os.makedirs(directoryname, exist_ok=True)
         break
@@ -298,8 +266,7 @@ with open(f'{directoryname}/Participant Statistics.csv', 'w+') as file:
                       file.write("Trial Type" + ',' + "Score")
 
 if jcount > 0:
-
-    joystick = joystick
+    pygame.joystick.init()
     joystick.init()
     pygame.event.get()
     joysticktimer = pygame.time.get_ticks()
@@ -537,8 +504,8 @@ def GC():
 
       COLLISION_SCORE = 0
 
-      font = pygame.font.SysFont("Verdana", 40)
-      font_small = pygame.font.SysFont("Verdana", 20)
+      font = pygame.font.SysFont("Arial", 40)
+      font_small = pygame.font.SysFont("Arial", 20)
 
       background = pygame.image.load("Stimuli/trial.jpeg")
 
@@ -601,7 +568,7 @@ def GC():
 
               width = 10
               height = 15
-              self.image = pygame.image.load("Stimuli/silhouette.png")
+              self.image = pygame.image.load("Stimuli/greendot.png")
               self.rect = self.image.get_rect()
               self.rect.x = SCREEN_WIDTH/2-80
               self.rect.y = SCREEN_HEIGHT/2
@@ -617,9 +584,9 @@ def GC():
           def move(self):
             if self.joystick_count != 0:
                 # Joystick input
-                horiz_axis_pos = self.my_joystick.get_axis(0)
+                #horiz_axis_pos = self.my_joystick.get_axis(0)
                 vert_axis_pos = self.my_joystick.get_axis(1)
-                self.rect.x += int(horiz_axis_pos * buttonspeed)
+                #self.rect.x += int(#horiz_axis_pos * buttonspeed)
                 self.rect.y += int(vert_axis_pos * buttonspeed)
 
             else:
@@ -702,7 +669,6 @@ def GC():
                    
                     if direction:
                         counter += 1
-                        print(f'Counter: {counter}, Direction: {direction}')
                         if trial_active:
                             finishedRT = time.time()
                             trial_active = False
@@ -750,6 +716,9 @@ def GC():
                 if timer > timer2:
                     pygame.init()
 
+                    if ReactionTime =='000':
+                        cdtest.noRT()
+
                     for entity in all_sprites:
                             entity.kill()
                     DISPLAYSURF.blit(background, (0,0))
@@ -773,8 +742,6 @@ def GC():
                       file.write("GC" + ',' + str(COLLISION_SCORE))
 
                     if jcount > 0:
-
-                        joystick = joystick
                         joystick.init()
 
                     Game_Running = False
@@ -797,12 +764,17 @@ def GC():
 
 def LC():
       sql_type = "LC"
+
+      reactiontime = '000'
+      ReactionTime = reactiontime
+
+      import cdtest
+      
       global GC_SPEED
       os.environ['SDL_VIDEO_CENTERED'] = '1'
       pygame.init()
       SCREEN_WIDTH, SCREEN_HEIGHT = pygame.display.Info().current_w, pygame.display.Info().current_h
-      pygame.joystick.init
-
+     
       pygame.init()
 
       pygame.font.init
@@ -840,14 +812,17 @@ def LC():
       FramePerSec = pygame.time.Clock()
 
       global GC_SPEED
-      SPEED = GC_SPEED * 0.5
+      SPEED = GC_SPEED * 0.572
+
+      print('LC Speed: ', SPEED)
+      
       if SPEED < 1:
         SPEED = 1.11
 
       COLLISION_SCORE = 0
 
-      font = pygame.font.SysFont("Verdana", 40)
-      font_small = pygame.font.SysFont("Verdana", 20)
+      font = pygame.font.SysFont("Arial", 40)
+      font_small = pygame.font.SysFont("Arial", 20)
 
       background = pygame.image.load("Stimuli/trial.jpeg")
 
@@ -910,7 +885,7 @@ def LC():
               width = 10
               height = 15
 
-              self.image = pygame.image.load("Stimuli/silhouette.png")
+              self.image = pygame.image.load("Stimuli/greendot.png")
 
               self.rect = self.image.get_rect()
 
@@ -927,10 +902,10 @@ def LC():
 
           def move(self):
                 if self.joystick_count != 0:
-                    horiz_axis_pos = self.my_joystick.get_axis(0)
+                    #horiz_axis_pos = self.my_joystick.get_axis(0)
                     vert_axis_pos = self.my_joystick.get_axis(1)
 
-                    self.rect.x += int(horiz_axis_pos * buttonspeed)
+                    #self.rect.x += int(#horiz_axis_pos * buttonspeed)
                     self.rect.y += int(vert_axis_pos * buttonspeed)
 
                 else:
@@ -940,7 +915,7 @@ def LC():
                         self.rect.y -= buttonspeed
                     if keys[pygame.K_DOWN]:
                         self.rect.y += buttonspeed
-
+                        
       P1 = Player()
       E1 = Enemy()
       E2 = Enemy2()
@@ -972,12 +947,14 @@ def LC():
 
       axis_state = {'held': False}
 
+      cdtest.LC()
+
       while Game_Running:
+                
                 pygame.event.pump()
                 keys = pygame.key.get_pressed()
                 yaxis = 0
 
-                
                 for event in pygame.event.get():
                     direction = None
 
@@ -986,7 +963,7 @@ def LC():
                         if yaxis < -0.2:
                             pressed_time = time.time()
                             direction = 'Up'
-                        elif yaxis > 0.2:
+                        elif yaxis > 0.2: 
                             pressed_time = time.time()
                             direction = 'Down'
 
@@ -998,17 +975,20 @@ def LC():
                             pressed_time = time.time()
                             direction = 'Down'
                             '''
-                            
+                                                     
                 joy_direction = read_joystick_direction(joystick, axis_state)
+                
                 if joy_direction:
                     direction = joy_direction
                     pressed_time = time.time()
                     deflection_buffer.append((participant_number, sql_type, direction, pressed_time - starterRT))
 
-                   
                     if direction:
                         counter += 1
-                        print(f'Counter: {counter}, Direction: {direction}')
+                        cdtest.LC_deflection()
+                        if counter == 1:                            
+                            cdtest.LC_RT()
+                            
                         if trial_active:
                             finishedRT = time.time()
                             trial_active = False
@@ -1021,15 +1001,14 @@ def LC():
                         print(f'Reaction Time: {ReactionTime}')
                         data = {'Type': ['LC'], 'Reaction Time': [ReactionTime]}
                         Reactiondf = pd.DataFrame(data)
-
-
                         Reactiondf.to_csv(f'{directoryname}/Reaction Time.csv', mode='a', header=False)
    
                         p300 = True
                         p500 = True
-                        trial_active = False
+                        trial_active = False                
 
                 startRT = time.time()
+                
                 for event in pygame.event.get():
 
                     if event.type == QUIT:
@@ -1055,7 +1034,12 @@ def LC():
                 timer = pygame.time.get_ticks()
                 if timer > timer2:
                     pygame.init()
+                    
+                    if ReactionTime =='000':
+                        cdtest.noRT()
 
+                    cdtest.LC_end()
+                    
                     for entity in all_sprites:
                             entity.kill()
                     DISPLAYSURF.blit(background, (0,0))
@@ -1079,8 +1063,6 @@ def LC():
                       file.write("LC" + ',' + str(COLLISION_SCORE))
 
                     if jcount > 0:
-
-                        joystick = joystick
                         joystick.init()
 
                     Game_Running = False
@@ -1172,8 +1154,8 @@ def analysis():
     checkbox_checked = False
     checkbox_rect = pygame.Rect((SCREEN_WIDTH // 2 - 15, SCREEN_HEIGHT - 100), (30, 30))
 
-    font = pygame.font.SysFont("Verdana", 40)
-    font_small = pygame.font.SysFont("Verdana", 20)
+    font = pygame.font.SysFont("Arial", 40)
+    font_small = pygame.font.SysFont("Arial", 20)
 
     background = pygame.image.load("Stimuli/trial.jpeg")
 
@@ -1295,8 +1277,8 @@ def CB():
       #SCORE = 0
       COLLISION_SCORE = 0
 
-      font = pygame.font.SysFont("Verdana", 40)
-      font_small = pygame.font.SysFont("Verdana", 20)
+      font = pygame.font.SysFont("Arial", 40)
+      font_small = pygame.font.SysFont("Arial", 20)
 
       background = pygame.image.load("Stimuli/trial.jpeg")
 
@@ -1338,14 +1320,14 @@ def CB():
               width = 10
               height = 15
 
-              # silhouette image
-              self.image = pygame.image.load("Stimuli/silhouette.png")
+              # greendot image
+              self.image = pygame.image.load("Stimuli/greendot.png")
 
 
               # Fetch the rectangle object that has the dimensions of the image
               self.rect = self.image.get_rect()
 
-              # Set initial position of silhouette
+              # Set initial position of greendot
               self.rect.x = SCREEN_WIDTH/2-80
               self.rect.y = SCREEN_HEIGHT/2-80
 
@@ -1361,10 +1343,10 @@ def CB():
 
           def move(self):
             if self.joystick_count != 0:
-                horiz_axis_pos = self.my_joystick.get_axis(0)
+                #horiz_axis_pos = self.my_joystick.get_axis(0)
                 vert_axis_pos = self.my_joystick.get_axis(1)
 
-                self.rect.x += int(horiz_axis_pos * buttonspeed)
+                #self.rect.x += int(#horiz_axis_pos * buttonspeed)
                 self.rect.y += int(vert_axis_pos * buttonspeed)
                 
             else:
@@ -1441,16 +1423,13 @@ def CB():
                     direction = joy_direction
                     pressed_time = time.time()
                     deflection_buffer.append((participant_number, sql_type, direction, pressed_time - starterRT))
-
                    
                     if direction:
+
                         counter += 1
-                        print(f'Counter: {counter}, Direction: {direction}')
-                        if trial_active:
-                            finishedRT = time.time()
-                            trial_active = False
-                            p300 = True
-                            p500 = True
+                        cdtest.GC_deflection()
+                        if counter == 1:                            
+                            cdtest.GC_RT()
                 
                     if counter == 1:
                         finishedRT = time.time()
@@ -1497,6 +1476,9 @@ def CB():
                 if timer > timer2:
                     pygame.init()
 
+                    if ReactionTime =='000':
+                        cdtest.noRT()
+
                     for entity in all_sprites:
                             entity.kill()
                     DISPLAYSURF.blit(background, (0,0))
@@ -1522,7 +1504,7 @@ def CB():
                         for i in range(jcount):
                             print(f"Joystick {i}: {joystick.get_name()}")
                             
-                        joystick = pygame.joystick.Joystick(2)
+                        joystick = pygame.joystick.Joystick()
                         joystick.init()
 
                     Game_Running = False
@@ -1543,7 +1525,6 @@ global ready
 ready = False
 
 def intro():
-    #pygame.display.flip()
     os.environ['SDL_VIDEO_CENTERED'] = '1'
     pygame.init()
     SCREEN_WIDTH, SCREEN_HEIGHT = pygame.display.Info().current_w, pygame.display.Info().current_h
@@ -1565,8 +1546,8 @@ def intro():
     checkbox_checked = False
     checkbox_rect = pygame.Rect((SCREEN_WIDTH // 2 - 15, SCREEN_HEIGHT - 100), (30, 30))
 
-    font = pygame.font.SysFont("Verdana", 40)
-    font_small = pygame.font.SysFont("Verdana", 20)
+    font = pygame.font.SysFont("Arial", 40)
+    font_small = pygame.font.SysFont("Arial", 20)
 
     background = pygame.image.load("Stimuli/trial.jpeg")
 
@@ -1597,9 +1578,10 @@ def intro():
         screen.blit(background, (0, 0))
         global false_count
 
-        prompt_text = "You will see two objects and a silhouette (yourself)"
+        prompt_text = "You will see two red objects and a green dot (yourself)"
+        
         if jcount > 0:
-            left_arrow_text = "You must use the joystick (push forwards and backwards) to move away from the objects - don't let them hit you!"
+            left_arrow_text = "Use the joystick (push forwards and backwards) to move away from the objects - don't let them hit you!"
 
         else:
             left_arrow_text = "You must use the up and down arrow keys to move away from the objects - don't let them hit you!"
@@ -1607,7 +1589,7 @@ def intro():
         right_arrow_text = "There will be 20 practice trials to build your familiarity with the task."
 
         prompt_surface = font.render(prompt_text, True, BLACK)
-        prompt_rect = prompt_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 150))
+        prompt_rect = prompt_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 300))
         screen.blit(prompt_surface, prompt_rect)
 
         left_arrow_surface = font.render(left_arrow_text, True, BLACK)
@@ -1615,7 +1597,7 @@ def intro():
         screen.blit(left_arrow_surface, left_arrow_rect)
 
         right_arrow_surface = font.render(right_arrow_text, True, BLACK)
-        right_arrow_rect = right_arrow_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 150))
+        right_arrow_rect = right_arrow_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 300))
         screen.blit(right_arrow_surface, right_arrow_rect)
 
         pygame.draw.rect(screen, BLACK, checkbox_rect, 2)
@@ -1641,8 +1623,9 @@ def intro():
         pygame.display.flip()
         clock.tick(60)
 
-
 def CB_Full():
+      import cdtest
+      ReactionTime = '000'
       sql_type = "CB_Full"
       os.environ['SDL_VIDEO_CENTERED'] = '1'
       pygame.init()
@@ -1687,8 +1670,8 @@ def CB_Full():
       COLLISION_SCORE = 0
 
       #Setting up Fonts
-      font = pygame.font.SysFont("Verdana", 40)
-      font_small = pygame.font.SysFont("Verdana", 20)
+      font = pygame.font.SysFont("Arial", 40)
+      font_small = pygame.font.SysFont("Arial", 20)
 
       background = pygame.image.load("Stimuli/trial.jpeg")
       pygame.time.wait(1000)
@@ -1741,7 +1724,7 @@ def CB_Full():
               width = 10
               height = 15
 
-              self.image = pygame.image.load("Stimuli/silhouette.png")
+              self.image = pygame.image.load("Stimuli/greendot.png")
               self.rect = self.image.get_rect()
 
               self.rect.x = SCREEN_WIDTH/2-80
@@ -1756,10 +1739,10 @@ def CB_Full():
 
         def move(self):
                 if self.joystick_count != 0:
-                    horiz_axis_pos = self.my_joystick.get_axis(0)
+                    #horiz_axis_pos = self.my_joystick.get_axis(0)
                     vert_axis_pos = self.my_joystick.get_axis(1)
 
-                    self.rect.x += int(horiz_axis_pos * buttonspeed)
+                    #self.rect.x += int(#horiz_axis_pos * buttonspeed)
                     self.rect.y += int(vert_axis_pos * buttonspeed)
 
                 else:
@@ -1791,7 +1774,6 @@ def CB_Full():
       starterRT = time.time()
       counter = 0
 
-
       Game_Running = True
       trial_active = True
       p300 = False
@@ -1806,12 +1788,11 @@ def CB_Full():
                 pygame.event.pump()
                 keys = pygame.key.get_pressed()
                 yaxis = 0
-
-                
+      
                 for event in pygame.event.get():
                     direction = None
 
-                    '''if event.type == pygame.JOYAXISMOTION and event.axis == 1:
+                    if event.type == pygame.JOYAXISMOTION and event.axis == 1:
                         yaxis = event.value
                         if yaxis < -0.2:
                             pressed_time = time.time()
@@ -1823,48 +1804,58 @@ def CB_Full():
                     elif event.type == pygame.KEYDOWN:
                         if event.key == pygame.K_UP:
                             pressed_time = time.time()
+                            print('up')
                             direction = 'Up'
                         elif event.key == pygame.K_DOWN:
                             pressed_time = time.time()
+                            print('down')
                             direction = 'Down'
-                            '''
-                            
-                joy_direction = read_joystick_direction(joystick, axis_state)
-                if joy_direction:
-                    direction = joy_direction
-                    pressed_time = time.time()
-                    deflection_buffer.append((participant_number, sql_type, direction, pressed_time - starterRT))
+                                             
+                try:
+                    joy_direction = read_joystick_direction(joystick, axis_state)
 
-                   
-                    if direction:
-                        counter += 1
-                        print(f'Counter: {counter}, Direction: {direction}')
-                        if trial_active:
+                except NameError as e:
+                    pass
+
+                try:
+                    
+                    if joy_direction or direction:
+                        direction = joy_direction
+                        pressed_time = time.time()
+                        deflection_buffer.append((participant_number, sql_type, direction, pressed_time - starterRT))
+
+                       
+                        if direction or direction:
+                            counter += 1
+                            if trial_active:
+                                finishedRT = time.time()
+                                trial_active = False
+                                p300 = True
+                                p500 = True
+                    
+                        if counter == 1:
                             finishedRT = time.time()
-                            trial_active = False
+                            ReactionTime = finishedRT - starterRT
+                            print(f'Reaction Time: {ReactionTime}')
+                            data = {'Type': ['Calibration Trial'], 'Reaction Time': [ReactionTime]}
+                            Reactiondf = pd.DataFrame(data)
+
+                            with open('Outputs/Calibration Score.csv', 'a+') as file:
+                                file.write('\n')
+                                file.write("Calibration (2 Stim)," + str(yaxis))
+
+                            with open(f'{directoryname}/Calibration Score.csv', 'a+') as file:
+                                file.write('\n')
+                                file.write("Calibration (2 Stim)," + str(yaxis))
+
+                            Reactiondf.to_csv(f'{directoryname}/Reaction Time.csv', mode='a', header=False)
+       
                             p300 = True
                             p500 = True
-                
-                    if counter == 1:
-                        finishedRT = time.time()
-                        ReactionTime = finishedRT - starterRT
-                        print(f'Reaction Time: {ReactionTime}')
-                        data = {'Type': ['Calibration Trial'], 'Reaction Time': [ReactionTime]}
-                        Reactiondf = pd.DataFrame(data)
-
-                        with open('Outputs/Calibration Score.csv', 'a+') as file:
-                            file.write('\n')
-                            file.write("Calibration (2 Stim)," + str(yaxis))
-
-                        with open(f'{directoryname}/Calibration Score.csv', 'a+') as file:
-                            file.write('\n')
-                            file.write("Calibration (2 Stim)," + str(yaxis))
-
-                        Reactiondf.to_csv(f'{directoryname}/Reaction Time.csv', mode='a', header=False)
-   
-                        p300 = True
-                        p500 = True
-                        trial_active = False
+                            trial_active = False
+                            
+                except UnboundLocalError as e:
+                    pass
 
                 startRT = time.time()
                 for event in pygame.event.get():
@@ -1891,6 +1882,10 @@ def CB_Full():
 
                 timer = pygame.time.get_ticks()
                 if timer > timer2:
+
+                    if ReactionTime =='000':
+                        cdtest.noRT()
+                    
                     pygame.init()
 
                     for entity in all_sprites:
@@ -1963,7 +1958,7 @@ def CB_last():
 
       clock = pygame.time.Clock()
 
-      # Starting position of the silhouette
+      # Starting position of the greendot
       rect_x = 50
       rect_y = 50
 
@@ -1994,8 +1989,8 @@ def CB_last():
       COLLISION_SCORE = 0
 
       #Setting up Fonts
-      font = pygame.font.SysFont("Verdana", 40)
-      font_small = pygame.font.SysFont("Verdana", 20)
+      font = pygame.font.SysFont("Arial", 40)
+      font_small = pygame.font.SysFont("Arial", 20)
 
       background = pygame.image.load("Stimuli/trial.jpeg")
 
@@ -2036,14 +2031,13 @@ def CB_last():
               width = 10
               height = 15
 
-              # silhouette image
-              self.image = pygame.image.load("Stimuli/silhouette.png")
-
+              # greendot image
+              self.image = pygame.image.load("Stimuli/greendot.png")
 
               # Fetch the rectangle object that has the dimensions of the image
               self.rect = self.image.get_rect()
 
-              # Set initial position of silhouette
+              # Set initial position of greendot
               self.rect.x = SCREEN_WIDTH/2-80
               self.rect.y = SCREEN_HEIGHT/2-80
 
@@ -2061,11 +2055,11 @@ def CB_last():
               if self.joystick_count != 0:
 
                   # joystick pos
-                  horiz_axis_pos = self.my_joystick.get_axis(0)
+                  #horiz_axis_pos = self.my_joystick.get_axis(0)
                   vert_axis_pos = self.my_joystick.get_axis(1)
 
                   # Move x and y, * speed
-                  self.rect.x = self.rect.x+int(horiz_axis_pos*int(0))
+                  #self.rect.x = self.rect.x+int(#horiz_axis_pos*int(0))
                   self.rect.y = self.rect.y+int(vert_axis_pos*int(4))
 
       P1 = Player()
@@ -2127,15 +2121,14 @@ def CB_last():
                             '''
                             
                 joy_direction = read_joystick_direction(joystick, axis_state)
+                
                 if joy_direction:
                     direction = joy_direction
                     pressed_time = time.time()
                     deflection_buffer.append((participant_number, sql_type, direction, pressed_time - starterRT))
 
-                   
                     if direction:
                         counter += 1
-                        print(f'Counter: {counter}, Direction: {direction}')
                         if trial_active:
                             finishedRT = time.time()
                             trial_active = False
@@ -2190,6 +2183,9 @@ def CB_last():
                 if timer > timer2:
                     pygame.init()
 
+                    if ReactionTime =='000':
+                        cdtest.noRT()
+
                     for entity in all_sprites:
                             entity.kill()
                     DISPLAYSURF.blit(background, (0,0))
@@ -2232,7 +2228,7 @@ def CB_last():
                 FramePerSec.tick(FPS)
                 flush_deflection_buffer()
 
-def Calibration_calculator():
+def CC():
     import pandas as pd
     import math
     import numpy as np
@@ -2263,16 +2259,17 @@ def Calibration_calculator():
         file.write('\n')
 
 num_operations = 40
-order = [random.choice([GC, LC]) for _ in range(num_operations)]
+order = [random.choice([LC]) for _ in range(num_operations)]
 
 #RestingState()
+
 intro()
 
-for i in range(1,6):
+for i in range(0, 3):
         CB_Full()
         
 for operation in order:
-    Calibration_calculator()
+    CC()
     operation()
 
 analysis()

@@ -40,13 +40,38 @@ def calibration():
 
 def LC():
     global trigger_count
-    dev.activate_line(bitmask=2)
-    log_trigger(db_connection, "2")
+    dev.activate_line(bitmask=10)
+    log_trigger(db_connection, "10")
 
 def GC():
     global trigger_count
     dev.activate_line(bitmask=3)
     log_trigger(db_connection, "3")
+
+def GC_RT():
+    global trigger_count
+    dev.activate_line(bitmask=21)
+    log_trigger(db_connection, "21")
+
+def GC_deflection():
+    global trigger_count
+    dev.activate_line(bitmask=22)
+    log_trigger(db_connection, "22")
+
+def LC_RT():
+    global trigger_count
+    dev.activate_line(bitmask=11)
+    log_trigger(db_connection, "11")
+
+def LC_deflection():
+    global trigger_count
+    dev.activate_line(bitmask=12)
+    log_trigger(db_connection, "12")
+
+def LC_end():
+    global trigger_count
+    dev.activate_line(bitmask=13)
+    log_trigger(db_connection, "13")
 
 def start():
     global trigger_count
@@ -62,6 +87,11 @@ def split():
     global trigger_count
     dev.activate_line(bitmask=129)
     log_trigger(db_connection, "129")
+
+def noRT():
+    global trigger_count
+    dev.activate_line(bitmask=100)
+    log_trigger(db_connection, "100")
 
 def close_connection():
     db_connection.close()
