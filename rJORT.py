@@ -58,9 +58,10 @@ def read_joystick_direction(joystick, axis_state, threshold=0.2):
     return direction
 
 
-inlab = True
+inlab = False
 Test = False
 stimtracker_available = True
+
 if not inlab:
     inlab = False
     stimtracker_available = False
@@ -87,7 +88,8 @@ def triggers():
                     show_error("StimTracker is not connected")
                     stimtracker_available = False
 
-triggers()
+if inlab:
+    triggers()
 
 connection = sqlite3.connect('rJORT.db')
 connection.row_factory = sqlite3.Row

@@ -23,13 +23,12 @@ def installation_and_joystick_check():
     ]
 
     installed_packages = {pkg.key for pkg in pkg_resources.working_set}
-    package_to_find = ""
+    package_to_find = None
 
     update_status(f"Checking dependencies...", 10)
     time.sleep(1)
     
     if package_to_find not in installed_packages:
-        print(f"{package_to_find} not found, installing all packages...")
         progress = 20
         increment = int(80 / len(packages_to_install))
 
@@ -41,6 +40,10 @@ def installation_and_joystick_check():
                 print(f"Successfully installed {package}")
             except subprocess.CalledProcessError as e:
                 print(f"Failed to install {package}: {e}")
+            except FileNotFoundError as e:
+                    subprocess.check_call(["pip3", "install", package])
+                    print(f"Successfully installed {package}")
+                    
     else:
         print("Pygame is already installed.")
         update_status("All packages already installed.", 80)
